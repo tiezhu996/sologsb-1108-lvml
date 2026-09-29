@@ -1,4 +1,8 @@
-import type { Dilution } from '../types/developer'
+import type { DeveloperState, Dilution } from '../types/developer'
+
+export function isDeveloperTerminal(state: DeveloperState): boolean {
+  return state === '报废' || state === '已撤销'
+}
 
 export interface DilutionParts {
   stock: number
