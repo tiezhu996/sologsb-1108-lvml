@@ -12,5 +12,6 @@ export interface Developer {
   maxRolls: number
   usedRolls: number
   state: DeveloperState
+  stockId?: number
   schemaRev?: number
 }

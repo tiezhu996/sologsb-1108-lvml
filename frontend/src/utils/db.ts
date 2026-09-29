@@ -3,6 +3,8 @@ import type { FilmStock } from '../types/film-stock'
 import type { Developer } from '../types/developer'
 import type { DevRecipe } from '../types/dev-recipe'
 import type { DevRun } from '../types/dev-run'
+import type { StockSolution } from '../types/stock'
+import type { PreparationRecord } from '../types/preparation'
 
 export function plain<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
@@ -23,6 +25,13 @@ const developerSeeds: Developer[] = [
   { id: 3, name: '罗迪纳尔 高稀释工作液', category: 'Rodinal', dilution: '1:3', volumeMl: 500, mixedAt: '2026-08-28', maxRolls: 10, usedRolls: 10, state: '在用', schemaRev: 2 },
   { id: 4, name: '柯达 C-41 彩色套药', category: 'C-41', dilution: '1:3', volumeMl: 1000, mixedAt: '2026-09-20', maxRolls: 12, usedRolls: 0, state: '新配', schemaRev: 2 },
   { id: 5, name: '旧版 D-76 补充液', category: 'D-76', dilution: '1:1', volumeMl: 750, mixedAt: '2026-05-10', maxRolls: 10, usedRolls: 10, state: '报废', schemaRev: 2 }
+]
+
+const stockSeeds: StockSolution[] = [
+  { id: 1, name: '柯达 D-76 浓缩液', category: 'D-76', openedAt: '2026-08-01', validDays: 180, volumeMl: 800, schemaRev: 3 },
+  { id: 2, name: '伊尔福 HC-110 浓缩液', category: 'HC-110', openedAt: '2026-09-10', validDays: 90, volumeMl: 600, schemaRev: 3 },
+  { id: 3, name: '罗迪纳尔 浓缩液', category: 'Rodinal', openedAt: '2026-06-01', validDays: 365, volumeMl: 320, schemaRev: 3 },
+  { id: 4, name: '柯达 C-41 彩色套药（旧）', category: 'C-41', openedAt: '2026-03-01', validDays: 180, volumeMl: 450, schemaRev: 3 }
 ]
 
 const recipeSeeds: DevRecipe[] = [
@@ -50,6 +59,8 @@ export class FilmDevDatabase extends Dexie {
   developers!: Table<Developer, number>
   recipes!: Table<DevRecipe, number>
   runs!: Table<DevRun, number>
+  stockSolutions!: Table<StockSolution, number>
+  preparationRecords!: Table<PreparationRecord, number>
 
   constructor() {
     super('gbfilmdev-db')
@@ -78,6 +89,20 @@ export class FilmDevDatabase extends Dexie {
         run.schemaRev = 2
       })
     })
+    this.version(3).stores({
+      films: '++id, model, format, expireDate, rollsLeft',
+      developers: '++id, category, state, mixedAt, stockId',
+      recipes: '++id, filmId, developerId, dilution, pushPull, tempC',
+      runs: '++id, recipeId, runDate, tankType',
+      stockSolutions: '++id, category, openedAt',
+      preparationRecords: '++id, stockId, developerId, state, preparedAt'
+    }).upgrade(async (transaction) => {
+      for (const table of ['films', 'developers', 'recipes', 'runs']) {
+        await transaction.table(table).toCollection().modify((record: { schemaRev?: number }) => {
+          record.schemaRev = 3
+        })
+      }
+    })
   }
 }
 
@@ -87,5 +112,6 @@ db.on('populate', () => Promise.all([
   db.films.bulkAdd(plain(filmSeeds)),
   db.developers.bulkAdd(plain(developerSeeds)),
   db.recipes.bulkAdd(plain(recipeSeeds)),
-  db.runs.bulkAdd(plain(runSeeds))
+  db.runs.bulkAdd(plain(runSeeds)),
+  db.stockSolutions.bulkAdd(plain(stockSeeds))
 ]))
